@@ -46,7 +46,7 @@ python manage.py runserver
 
 可以看到Django启动了一个名为 development server 的服务器，使能够查看系统中的项目，了解其工作情况。如果在浏览器中输入URL以请求页面，该Django服务器将进行响应：生成合适的页面，并将其发送给浏览器。
 
-URL(http://127.0.0.1:8000/)表明项目将在计算机（即127.0.0.1）的端口8000上侦听当前系统发出的请求。
+URL http://127.0.0.1:8000/ 表明项目将在计算机（即127.0.0.1）的端口8000上侦听当前系统发出的请求。
 
 当要关闭这个服务器时，可切换到执行命令runserver 时所在的终端窗口，再退出。
 
@@ -177,7 +177,7 @@ from .models import Topic
 admin.site.register(Topic)
 ```
 
-现在，使用超级用户账户访问管理网站：访问(http://127.0.0.1:8000/admin/)，登录超级账户。此时你能够添加和修改用户和用户组，还可管理与刚才定义的模型Topic相关的数据。
+现在，使用超级用户账户访问管理网站：访问 http://127.0.0.1:8000/admin/ ，登录超级账户。此时你能够添加和修改用户和用户组，还可管理与刚才定义的模型Topic相关的数据。
 
 ##### 1.2.3.3 添加主题
 
@@ -241,7 +241,7 @@ python manage.py migrate
 admin.site.register(Entry)
 ```
 
-此时再次进入服务器(http://127.0.0.1:8000/admin/)，将看到Learning_logs下列出了Entries。
+此时再次进入服务器 http://127.0.0.1:8000/admin/ ，将看到Learning_logs下列出了Entries。
 
 单击Entries的Add链接，或者单击Entries再选择Add entry，将看到一个下拉列表，供你选择要为哪个主题创建条目，以及一个用于输入条目的文本框。
 
@@ -249,7 +249,7 @@ admin.site.register(Entry)
 
 在活动状态的虚拟环境中执行时，命令```python manage.py shell```启动shell，就能够探索存储在项目数据库中的数据。
 
-如下方代码导入了模块learning_logs.models中的模型Topic，再使用方法Topic.objects.all() 获取模型Topic 的所有实例，这将返回一个称为查询集(queryset)的列表。此时可以像遍历列表一样遍历查询集。将返回的查询集存储在topics中，再打印每个主题的id属性和字符串表示。知道主题对象的ID后，就可使用方法Topic.objects.get()获取该对象并查看其属性。我们还可以查看与主题相关联的条目。前面给模型Entry定义了属性topic。这是一个ForeignKey，将条目与主题关联起来。利用这种关联，Django能够获取与特定主题相关联的所有条目。
+如下方代码导入了模块learning_logs.models中的模型Topic，再使用方法Topic.objects.all()获取模型Topic 的所有实例，这将返回一个称为查询集(queryset)的列表。此时可以像遍历列表一样遍历查询集。将返回的查询集存储在topics中，再打印每个主题的id属性和字符串表示。知道主题对象的ID后，就可使用方法Topic.objects.get()获取该对象并查看其属性。我们还可以查看与主题相关联的条目。前面给模型Entry定义了属性topic。这是一个ForeignKey，将条目与主题关联起来。利用这种关联，Django能够获取与特定主题相关联的所有条目。
 ```Shell
 # python manage.py shell
 
@@ -286,7 +286,7 @@ datetime.datetime(2022, 6, 22, 11, 36, 53, 999755, tzinfo=<UTC>)
 
 ### 1.3.1 映射URL
 
-当前基础URL(http://127.0.0.1:8000/)返回默认的Django网站，我们将其修改为映射到“学习笔记”的主页。
+当前基础URL http://127.0.0.1:8000/ 返回默认的Django网站，我们将其修改为映射到“学习笔记”的主页。
 
 打开learning_log/urls.py，其代码如下：
 ```Python
@@ -332,7 +332,7 @@ urlpatterns = [
 
 默认的urls.py包含在文件夹learning_log中，现在需要在文件夹learning_logs中再创建一个urls.py文件。再在learning_logs/urls.py中输入如下代码：
 ```Python
-'''定义learning_logs的URL模式'''
+'''define URL patterns for learning_logs'''
 
 from django.urls import path
 
@@ -341,14 +341,14 @@ from . import views
 
 app_name = 'learning_logs'
 urlpatterns = [
-    # main page
-    path('', views.index, name='index')
+    # home page
+    path('', views.index, name='index'),
 ]
 ```
 
 导入函数path ，使用它将URL映射到视图。导入模块views（在learning_logs文件夹下）。
 
-变量app_name让Django能够将learning_logs/urls.py文件同项目内其他应用程序中的同名文件区分开来。在这个模块中，变量urlpatterns是一个列表，包含可在应用程序learning_logs中请求的页面。实际的URL模式是对函数path()的调用，这个函数接受三个实参。第一个是字符串，帮助Django正确地路由（route）请求。收到请求的URL后，Django力图将请求路由给一个视图。为此，它搜索所有的URL模式，找到与当前请求匹配的那个。Django忽略项目的基础URL(http://17.0.0.1:8000/)，因此空字符串与基础URL匹配。其他URL都与这个模式不匹配。如果请求的URL与任何既有的URL模式都不匹配，Django将返回一个错误页面。path() 的第二个实参指定了要调用learning_logs/view.py中的哪个函数。请求的URL与前述正则表达式匹配时，Django将调用learning_logs/view.py中的函数index()。第三个实参将这个URL模式的名称指定为index，让我们能够在代码的其他地方引用它。每当需要提供到这个主页的链接时，都将使用这个名称，而不编写URL。
+变量app_name让Django能够将learning_logs/urls.py文件同项目内其他应用程序中的同名文件区分开来。在这个模块中，变量urlpatterns是一个列表，包含可在应用程序learning_logs中请求的页面。实际的URL模式是对函数path()的调用，这个函数接受三个实参。第一个是字符串，帮助Django正确地路由（route）请求。收到请求的URL后，Django力图将请求路由给一个视图。为此，它搜索所有的URL模式，找到与当前请求匹配的那个。Django忽略项目的基础URL http://17.0.0.1:8000/ ，因此空字符串与基础URL匹配。其他URL都与这个模式不匹配。如果请求的URL与任何既有的URL模式都不匹配，Django将返回一个错误页面。path() 的第二个实参指定了要调用learning_logs/view.py中的哪个函数。请求的URL与前述正则表达式匹配时，Django将调用learning_logs/view.py中的函数index()。第三个实参将这个URL模式的名称指定为index，让我们能够在代码的其他地方引用它。每当需要提供到这个主页的链接时，都将使用这个名称，而不编写URL。
 
 ### 1.3.2 编写视图
 
@@ -393,5 +393,277 @@ URL请求与刚才定义的模式匹配时，Django将在文件learning_logs/vie
 
 标签<p></p>标识段落。标签<p>指出段落的开头位置，而标签</p>指出段落的结束位置。这里定义了两个段落：第一个充当标题，第二个阐述了用户可使用“学习笔记”来做什么。
 
-现在，如果请求这个项目的基础URL(http://127.0.0.1:8000/)，将看到刚才创建的页面，而不是默认的Django页面。Django接受请求的URL，发现该URL与模式''匹配，因此调用函数views.index()。这将使用index.html包含的模板来渲染页面。
+现在，如果请求这个项目的基础URL http://127.0.0.1:8000/ ，将看到刚才创建的页面，而不是默认的Django页面。Django接受请求的URL，发现该URL与模式''匹配，因此调用函数views.index()。这将使用index.html包含的模板来渲染页面。
 
+## 1.4 创建其他页面
+
+将创建两个显示数据的页面，其中一个列出所有的主题，另一个显示特定主题的所有条目。对于每个页面，我们都将指定URL模式、编写一个视图函数并编写一个模板。但这样做之前，我们先创建一个父模板，项目中的其他模板都将继承它。
+
+### 1.4.1 模板继承
+
+创建网站时，一些通用元素几乎会在所有页面中出现。在这种情况下，可编写一个包含通用元素的父模板，并让每个页面都继承这个模板，而不必在每个页面中重复定义这些通用元素。
+
+##### 1.4.1.1 父模板
+
+创建learning_logs\templates\learning_logs\base.html作为父模板，其他模板可继承它。其代码如下：
+```html
+<p>
+    <a href="{% url 'learning_logs:index' %}">Learning Log</a>
+</p>
+
+{% block content %}{% endblock content %}
+```
+
+第一部分创建一个包含项目名的段落，该段落也是到主页的链接。为创建链接，使用了一个模板标签 ，它是用花括号和百分号```{% %}```表示的。模板标签是一小段代码，生成要在页面中显示的信息。这里的模板标签生成一个URL，该URL与在learning_logs/urls.py中定义的名为index的URL模式匹配。在本例中，learning_logs是一个命名空间，而index是该命名空间中一个名称独特的URL模式。这个命名空间来自在文件learning_logs/urls.py中赋给app_name的值。
+
+在简单的HTML页面中，链接是使用锚标签```<a>```定义的：
+```html
+<a href="link_url">link text</a>
+```
+
+通过使用模板标签来生成URL，能很容易地确保链接是最新的：只需修改urls.py中的URL模式，Django就会在页面下次被请求时自动插入修改后的URL。在本项目中，每个页面都将继承base.html，因此从现在开始，每个页面都包含到主页的链接。
+
+接着插入了一对块标签。这个块名为content，是一个占位符，其中包含的信息由子模板指定。子模板并非必须定义父模板中的每个块，因此在父模板中，可使用任意多个块来预留空间，而子模板可根据需要定义相应数量的块。
+
+##### 1.4.1.2 子模版
+
+现在重写learning_logs\templates\learning_logs\index.html，使其继承learning_logs\templates\learning_logs\base.html。
+
+修改代码如下：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+    <p>Learning Log helps you keep track of your learning, for any topic you are learning about.</p>
+{% endblock content %}
+```
+
+子模板的第一行必须包含标签```{% extends %}```，让Django知道它继承了哪个父模板。文件base.html位于learning_logs中，因此父模板路径中包含learning_logs。这行代码导入模板base.html的所有内容，让index.html能够指定要在content块预留的空间中添加的内容。
+
+插入了一个名为content的```{% block %}```标签，以定义content块。不是从父模板继承的内容都包含在content块中，在这里是一个描述项目“学习笔记”的段落。
+
+使用标签```{% endblock content %}```指出了内容定义的结束位置。在标签```{% endblock %}```中，并非必须指定块名，但如果模板包含多个块，指定块名有助于确定结束的是哪个块。
+
+*模板继承的优点：在子模板中，只需包含当前页面特有的内容。*
+
+### 1.4.2 显示所有主题的页面
+
+显示用户创建的所有主题，是一个需要使用数据的页面。
+
+##### 1.4.2.1 URL模式
+
+首先，定义显示所有主题的页面的URL。我们通常使用一个简单的URL片段来指出页面显示的信息，这里使用单词topics，因此URL http://localhost:8000/topics/ 将返回显示所有主题的页面。
+
+在learning_logs/urls.py中修改代码如下：
+```Python
+'''define URL patterns for learning_logs'''
+
+from django.urls import path
+
+from . import views
+
+
+app_name = 'learning_logs'
+urlpatterns = [
+    # home page
+    path('', views.index, name='index'),
+
+    # page that shows all topics
+    path('topics/', views.topics, name='topics'),
+]
+```
+
+这里在用于主页URL的字符串参数中添加了topics/。Django检查请求的URL时，这个模式与如下URL匹配：基础URL后面跟着topics。可在末尾包含斜杠，也可省略，但单词topics后面不能有任何东西，否则就与该模式不匹配。URL与该模式匹配的请求都将交给views.py中的函数topics()处理。
+
+##### 1.4.2.2 视图
+
+函数topics()需要从数据库中获取数据并提交给模板，修改learning_logs/view.py如下：
+```Python
+from django.shortcuts import render
+
+from .models import Topic
+
+# Create your views here.
+def index(request):
+    '''show home page'''
+    return render(request, 'learning_logs/index.html')
+
+def topics(request):
+    '''show all topics'''
+    topics = Topic.objects.order_by('date_added')
+    context = {'topics': topics}
+    return render(request, 'learning_logs/topics.html', context)
+```
+
+首先导入与所需数据相关联的模型。函数topics()包含一个形参：Django从服务器那里收到的request对象。
+
+查询数据库——请求提供Topic对象，并根据属性date_added进行排序。返回的查询集被存储在topics中。
+
+定义一个将发送给模板的上下文。上下文是一个字典，其中的键是将在模板中用来访问数据的名称，而值是要发送给模板的数据。这里只有一个键值对，包含一组将在页面中显示的主题。
+
+创建使用数据的页面时，除了对象request和模板的路径外，还将变量context传递给render()
+
+##### 1.4.2.3 模板
+
+显示所有主题的页面的模板接受字典context，以便使用topics()提供的数据。在learning_logs/templates/learning_logs中创建topics.html，在这个模板中显示主题。其代码如下：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    <p>Topics</p>
+
+    <ul>
+        {% for topic in topics %}
+            <li>{{ topic }}</li>
+        {% empty %}
+            <li>No topics have been added yet.</li>
+        {% endfor %}
+    </ul>
+
+{% endblock content %}
+```
+
+首先使用标签```{% extends %}```来继承base.html，再开始定义content块。这个页面的主体是一个项目列表，其中列出了用户输入的主题。在标准HTML中，项目列表称为无序列表，用标签```<ul></ul>```表示。包含所有主题的项目列表始于```<ul>```。
+
+使用一个相当于for循环的模板标签，它遍历字典context中的列表topics。模板中使用的代码与Python代码存在一些重要差别：Python使用缩进来指出哪些代码行是for循环的组成部分；而在模板中，每个for循环都必须使用```{% endfor %}```标签来显式地指出其结束位置。因此在模板中，循环类似于下面这样：
+```html
+{% for item in list %}
+    do something with each item
+{% endfor %}
+```
+
+在循环中，要将每个主题转换为项目列表中的一项。要在模板中打印变量，需要将变量名用双花括号括起。这些花括号不会出现在页面中，只是用于告诉Django我们使用了一个模板变量。因此每次循环时，代码```{{ topic }}```都被替换为topic的当前值。HTML标签```<li></li>```表示一个项目列表项。在标签对```<ul></ul>```内部，位于标签```<li>```和```</li>```之间的内容都是一个项目列表项。
+
+使用模板标签```{% empty %}```，它告诉Django在列表topics为空时该如何办。这里是打印一条消息，告诉用户还没有添加任何主题。最后两行分别结束for循环和项目列表。
+
+下面需要修改父模板，使其包含到显示所有主题的页面的链接。修改learning_logs\templates\learning_logs\base.html代码如下：
+```html
+<p>
+    <a href="{% url 'learning_logs:index' %}">Learning Log</a> - 
+    <a href="{% url 'learning_logs:topics' %}">Topics</a>
+</p>
+
+{% block content %}{% endblock content %}
+```
+
+在到主页的链接后面添加一个连字符，再添加一个到显示所有主题的页面的链接——使用的也是模板标签```{% url %}```。这行让Django生成一个链接，它与learning_logs/urls.py中名为topics的URL模式匹配。
+
+现在如果刷新浏览器中的主页，将看到链接Topics。
+
+### 1.4.3 显示特定主题的页面
+
+接下来，需要创建一个专注于特定主题的页面，它显示该主题的名称以及所有条目。
+
+此外，还将修改显示所有主题的页面，让每个项目列表项都变为到相应主题页面的链接。
+
+##### 1.4.3.1 URL模式
+
+显示特定主题的页面的URL模式与前面的所有URL模式都稍有不同，因为它使用主题的id属性来指出请求的是哪个主题
+
+在learning_logs/urls.py中添加与这个URL匹配的模式
+```Python
+urlpatterns = [
+    # home page
+    path('', views.index, name='index'),
+
+    # page that shows all topics
+    path('topics/', views.topics, name='topics'),
+
+    # detail page for a single topic
+    path('topics/<int:topic_id>/', views.topic, name='topic'),
+]
+```
+
+这个URL模式中的字符串```topics/<int:topic_id>/```。这个字符串的第一部分让Django查找在基础URL后包含单词topics的URL，第二部分```/<int:topic_id>/```与包含在两个斜杠内的整数匹配，并将这个整数存储在一个名为topic_id的实参中。发现URL与这个模式匹配时，Django将调用视图函数topic()，并将存储在topic_id中的值作为实参传递给它。在这个函数中，将使用topic_id的值来获取相应的主题
+
+##### 1.4.3.2 视图
+
+函数topic()需要从数据库中获取指定的主题以及与之相关联的所有条目，在learning_logs\views.py中定义函数topic():
+```Python
+def topic(request, topic_id):
+    '''show a single topic and all its entries'''
+    topic = Topic.objects.get(id=topic_id)
+    entries = topic.entry_set.order_by('-date_added')
+    context = {'topic': topic, 'entries': entries}
+    return render(request, 'learning_logs/topic.html', context)
+```
+
+这是除request对象外还包含另一个形参的视图函数。这个函数接受表达式```/<int:topic_id>/```捕获的值，并将其存储到topic_id中。
+
+使用get()来获取指定的主题，就像前面在Django shell中所做的那样。
+
+获取与该主题相关联的条目，并根据date_added进行排序。date_added前面的减号指定按降序排列，即先显示最近的条目。
+
+将主题和条目都存储在字典context中，再将这个字典发送给模板topic.html
+
+*注意：get和entry_set处的代码称为查询，因为它们向数据库查询了特定的信息。比起先编写视图和模板、再在浏览器中检查结果，在shell中执行代码可更快获得反馈。*
+
+##### 1.4.3.3 模板
+
+这个模板需要显示主题的名称和条目的内容。如果当前主题不包含任何条目，也需向用户指出：
+
+创建learning_logs\templates\learning_logs\topic.html，写入特定主题的模板：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    <p>Topic: {{ topic }}</p>
+
+    <p>Entries:</p>
+
+    <ul>
+    {% for entry in entries %}
+        <li>
+            <p>{{ entry.date_added|date:'M d, Y H:i' }}</p>
+            <p>{{ entry.text|linebreaks }}</p>
+        </li>
+    {% empty %}
+        <li>There are no entries for this topic yet.</li>
+    {% endfor %}
+    </ul>
+
+{% endblock content %}
+```
+
+首先继承base.html。
+
+接下来，显示当前的主题，它存储在模板变量```{{ topic }}```中。变量topic包含在字典context中，所以可以使用。
+
+定义一个显示每个条目的项目列表，并像前面显示所有主题一样遍历条目。每个项目列表项都将列出两项信息：条目的时间戳和完整的文本。
+
+为列出时间戳，我们显示属性date_added的值。在Django模板中，竖线表示模板过滤器，即对模板变量的值进行修改的函数。过滤器```date: 'M d,Y H:i'```以类似于这样的格式显示时间戳：```January 1, 2018 23:00```。
+
+接下来的一行显示text 的完整值，而不仅仅是前50字符。过滤器linebreaks将包含换行符的长条目转换为浏览器能够理解的格式，以免显示为不间断的文本块。
+
+使用模板标签```{% empty %}```打印一条消息，告诉用户当前主题还没有条目。
+
+##### 1.4.3.4 将显示所有主题的页面中的主题设置为链接
+
+在浏览器中查看显示特定主题的页面前，需要修改模板learning_logs\templates\learning_logs\topics.html，让每个主题都链接到相应的页面，其代码修改如下：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    <p>Topics</p>
+
+    <ul>
+        {% for topic in topics %}
+            <li>
+                <a href="{% url 'learning_logs:topic' topic.id %}">{{ topic }}</a>
+            </li>
+        {% empty %}
+            <li>No topics have been added yet.</li>
+        {% endfor %}
+    </ul>
+
+{% endblock content %}
+```
+
+使用模板标签url根据learning_logs中名为topic的URL模式生成了合适的链接。这个URL模式要求提供实参topic_id，因此在模板标签url中添加了属性'topic.id'。现在，主题列表中的每个主题都是链接了，链接到显示相应主题的页面，如 http://127.0.0.1:8000/topics/1/ 。
+
+如果现在刷新显示所有主题的页面，再单击其中的一个主题，就可看到相应的特定主题
+
+*注意：topics.html中添加的是属性topic.id而非实参topic_id。topic.id和topic_id之间存在细微而重要的差别。表达式topic.id检查主题并获取其ID值，而在代码中，变量topic_id是指向该ID的引用。*

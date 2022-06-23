@@ -667,3 +667,414 @@ def topic(request, topic_id):
 如果现在刷新显示所有主题的页面，再单击其中的一个主题，就可看到相应的特定主题
 
 *注意：topics.html中添加的是属性topic.id而非实参topic_id。topic.id和topic_id之间存在细微而重要的差别。表达式topic.id检查主题并获取其ID值，而在代码中，变量topic_id是指向该ID的引用。*
+
+# 2. 用户账户的创建和设置
+
+## 2.1 让用户输入数据
+
+在建立用于创建用户账户的身份验证系统之前，先添加几个页面，让用户能够输入数据，包括添加新主题，添加新条目以及编辑既有条目。
+
+用户不需要与管理网站交互，所以使用Django的表单创建工具来创建让用户能够输入数据的页面。
+
+### 2.1.1 添加新主题
+
+创建基于表单的页面的方法同样是：定义URL，编写视图函数以及编写模板。此外，与之前不同，需要导入包含表单的模块forms.py。
+
+##### 2.1.1.1 用于添加主题的表单
+
+用户输入信息时，我们需要进行验证，确认提供的信息是正确的数据类型，而不是恶意的信息，如中断服务器的代码。然后，对这些有效信息进行处理，并将其保存到数据库的合适地方。这些工作很多都是由Django自动完成的。
+
+在Diango中，创建表单的最简单方式是使用ModelForm，它根据已经定义好的模型中的信息自动创建表单。
+
+在learning_logs文件夹中创建forms.py，编写第一个表单如下：
+```python
+from django import forms
+
+from .models import Topic
+
+
+class TopicForm(forms.ModelForm):
+    class Meta:
+        model = Topic
+        fields = ['text']
+        labels = {'text': ''}
+```
+
+首先导入模块forms和模型Topic。
+
+定义TopicForm类继承forms.ModelForm。最简单的ModelForm 版本只包含一个内嵌的Meta类，让Django根据哪个模型创建表单以及在表单中包含哪些字段。
+
+根据模型Topic 创建表单，其中只包含字段text。
+
+设置labels的第一个键值对让Django不要为字段text生成标签。
+
+##### 2.1.1.2 URL模式new_topic
+
+在learning_logs/urls.py中创建页面new_topic的URL模式如下：
+```Python
+urlpatterns = [
+    # -------- snip -------- #
+
+    # page for adding a new topic
+    path('new_topic/', views.new_topic, name='new_topic')
+]
+```
+
+当用户要添加到新主题时，切换到 http://127.0.0.1:8000/new_topic/ 。
+
+这个URL模式将请求交给视图函数new_topic()。
+
+##### 2.1.1.3 视图函数new_topic()
+
+函数new_topic() 需要处理两种情形。一是刚进入new_topic页面（在这种情况下应显示空表单）；二是对提交的表单数据进行处理，并将用户重定向到页面topics。
+
+在learning_logs/views.py中导入函数redirect，用户提交主题后将使用这个函数重定向到页面topics。函数redirect将视图名作为参数，并将用户重定向到这个视图。还导入了刚创建的表单TopicForm。
+
+learning_logs/views.py定义新函数new_topic()如下：
+```Python
+from .forms import TopicForm
+
+def new_topic(request):
+    '''add a new topic'''
+    if request.method != 'POST':
+        # No data submitted; create a blank form.
+        form = TopicForm()
+    else:
+        # POST data submitted; process data.
+        form = TopicForm(data=request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('learning_logs:topics')
+
+    # display a blank or invalid form
+    context = {'form': form}
+    return render(request, 'learning_logs/new_topic.html', context)
+```
+
+GET请求和POST请求：
+
+创建Web应用程序时，将用到的两种主要请求类型是GET请求和POST请求。对于只是从服务器读取数据的页面，使用GET请求；在用户需要通过表单提交信息时，通常使用POST请求。处理所有表单时，都将指定使用POST方法。
+
+函数new_topic()将请求对象作为参数。用户初次请求该页面时，其浏览器将发送GET请求；用户填写并提交表单时，其浏览器将发送POST请求。根据请求的类型，可确定用户请求的是空表单（GET请求）还是要求对填写好的表单进行处理（POST请求）。
+
+new_topic()的第一个if测试确定请求方法是GET还是POST。如果请求方法不是POST，请求就可能是GET，因此需要返回一个空表单。（即便请求是其他类型的，返回空表单也不会有任何问题。）
+
+下一行创建一个TopicForm实例，将其赋给变量form，再通过上下文字典将这个表单发送给模板。由于实例化TopicForm时没有指定任何实参，Django将创建一个空表单，供用户填写。
+
+如果请求方法为POST，将执行else 代码块，对提交的表单数据进行处理。使用用户输入的数据（存储在request.POST中）创建一个TopicForm实例，这样对象form 将包含用户提交的信息。
+
+要将提交的信息保存到数据库，必须先通过检查确定它们是有效的。方法is_valid() 核实用户填写了所有必不可少的字段（表单字段默认都是必不可少的），且输入的数据与要求的字段类型一致。这种自动验证避免了我们去做大量的工作。如果所有字段都有效，就可调用save()，将表单中的数据写入数据库。
+
+保存数据后，就可离开这个页面了。为此，使用redirect()将用户的浏览器重定向到页面topics。在页面topics中，用户将在主题列表中看到他刚输入的主题。
+
+在这个视图函数的末尾定义了变量context ，并使用稍后将创建的模板new_topic.html来渲染页面。这些代码不在if代码块内，因此无论是用户刚进入new_topic页面还是提交的表单数据无效，这些代码都将执行。用户提交的表单数据无效时，将显示一些默认的错误消息，帮助用户提供有效的数据。
+
+##### 2.1.1.4 模板new_topic
+
+下面创建新模板learning_logs\templates\learning_logs\new_topic.html，用于显示刚创建的表单：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+    <p>Add a new topic:</p>
+
+    <form action="{% url 'learning_logs:new_topic' %}" method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button name="submit">Add topic</button>
+    </form>
+
+{% endblock content %}
+```
+
+定义了一个HTML表单。实参action告诉服务器将提交的表单数据发送到哪里。这里将它发回给视图函数new_topic()。实参method让浏览器以POST请求的方式提交数据。
+
+Django使用模板标签```{% csrf_token %}```来防止攻击者利用表单来获得对服务器未经授权的访问（这种攻击称为跨站请求伪造）。
+
+只需创建模板变量```{{form.as_p }}```，就可让Django自动创建显示表单所需的全部字段。修饰符as_p让Django以段落格式渲染所有表单元素，这是一种整洁地显示表单的简单方式。
+
+Django不会为表单创建提交按钮，因此我们手动定义。
+
+##### 2.1.1.5 链接到页面new_topic
+
+下面在页面topics中添加到页面new_topic的链接：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    <p>Topics</p>
+
+    <ul>
+        {% for topic in topics %}
+            <li>
+                <a href="{% url 'learning_logs:topic' topic.id %}">{{ topic }}</a>
+            </li>
+        {% empty %}
+            <li>No topics have been added yet.</li>
+        {% endfor %}
+    </ul>
+
+    <a href="{% url 'learning_logs:new_topic' %}">Add a new topic</a>
+
+{% endblock content %}
+```
+
+这个链接放在既有主题列表的后面。
+
+### 2.1.2 添加新条目
+
+通过在learning_logs/forms.py再添加一个类，并进行后续的定义URL、编写视图函数和编写模板，并链接到添加新条目的页面，使得用户账户可以添加新条目。
+
+##### 2.1.2.1 用于添加新条目的表单
+
+需要创建一个与模型Entry相关联的表单，但这个表单的定制程度比TopicForm更高一些。
+
+在learning_logs/forms.py再添加一个类EntryForm()
+```Python
+from .models import Entry
+
+class EntryForm(forms.ModelForm):
+    class Meta:
+        model = Entry
+        fields = ['text']
+        labels = {'text': 'Entry:'}
+        widgets = {'text': forms.Textarea(attrs={'cols': 80})}
+```
+
+新类EntryForm继承了forms.ModelForm，它包含的Meta类指出了表单基于的模型以及要在表单中包含哪些字段。这里给字段text指定了标签'Entry:'。
+
+定义属性widgets 。小部件（widget）是一个HTML表单元素，如单行文本框、多行文本区域或下拉列表。通过设置属性widgets，可覆盖Django选择的默认小部件。通过让Django使用forms.Textarea，我们定制了字段'text'的输入小部件，将文本区域的宽度设置为80列，而不是默认的40列。这给用户提供了足够的空间来编写有意义的条目。
+
+##### 2.1.2.2 URL模式new_entry
+
+在用于添加新条目的页面的URL模式中，需要包含实参topic_id，因为条目必须与特定的主题相关联。
+
+在learning_logs/urls.py添加该URL模式如下：
+```Python
+urlpatterns = [
+    # -------- snip -------- #
+
+    # page for adding a new entry
+    path('new_entry/<int:topic_id>/', views.new_entry, name='new_entry'),
+]
+```
+
+这个URL模式与形如 http://127.0.0.1:8000/new_entry/id/ 的URL匹配，其中的id是一个与主题ID匹配的数。代码```<int:topic_id>```捕获一个数值，并将其赋给变量topic_id。请求的URL与这个模式匹配时，Django将请求和主题ID发送给函数new_entry()。
+
+##### 2.1.2.3 视图函数new_entry()
+
+在learning_logs/views.py中定义并添加视图函数new_entry()：
+```Python
+from .forms import EntryForm
+
+def new_entry(request, topic_id):
+    '''add a new entry for a particular topic'''
+    topic = Topic.objects.get(id=topic_id)
+    if request.method != 'POST':
+        # No data submitted; create a blank form.
+        form = EntryForm()
+    else:
+        # POST data submitted; process data.
+        form = EntryForm(data=request.POST)
+        if form.is_valid():
+            new_entry = form.save(commit=False)
+            new_entry.topic = topic
+            new_entry.save()
+            return redirect('learning_logs:topic', topic_id=topic_id)
+
+    # display a blank or invalid form
+    context = {'topic': topic, 'form': form}
+    return render(request, 'learning_logs/new_entry.html', context)
+```
+
+导入刚刚创建的EntryForm类。
+
+new_entry()的定义包含形参topic_id，用于存储从URL中获得的值。渲染页面和处理表单数据时，都需要知道针对的是哪个主题，因此使用topic_id来获得正确的主题。
+用```if request.method != 'POST'```语句检查请求方法是POST还是GET。
+
+如果是GET请求，就执行if代码块，创建一个空的EntryForm实例。如果请求方法为POST，就对数据进行处理：创建一个EntryForm实例，使用request对象中的POST数据来填充它。然后检查表单是否有效。如果有效，就设置条目对象的属性topic，再将条目对象保存到数据库。
+
+调用save()时，传递实参commit=False，让Django创建一个新的条目对象，并将其赋给new_entry，但不保存到数据库中。将new_entry的属性topic设置为在这个函数开头从数据库中获取的主题，再调用save()且不指定任何实参。这将把条目保存到数据库，并将其与正确的主题相关联。
+
+调用redirect()，它要求提供两个参数：要重定向到的视图和要给视图函数提供的参数。这里重定向到topic()，而这个视图函数需要参数topic_id。视图函数topic()渲染新增条目所属主题的页面，其中的条目列表包含新增的条目。
+
+在视图函数new_entry()的末尾，我们创建了一个上下文字典，并使用模板new_entry.html渲染页面。这些代码将在用户刚进入页面或提交的表单数据无效时执行。
+
+##### 2.1.2.4 模板new_entry
+
+在learning_logs\templates\learning_logs中创建new_entry.html，并在其中创建模板new_entry:
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    <p><a href="{% url 'learning_logs:topic' topic.id %}">{{ topic }}</a></p>
+
+    <p>Add a new entry:</p>
+    <form action="{% url 'learning_logs:new_entry' topic.id %}" method='post'>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button name='submit'>Add entry</button>
+    </form>
+{% endblock content %}
+```
+
+在页面顶端显示主题，让用户知道自己是在哪个主题中添加条目。该主题名也是一个链接，可用于返回到该主题的主页面。
+
+表单的实参action包含URL中的topic_id值，让视图函数能够将新条目关联到正确的主题。除此之外，这个模板与模板new_topic.html完全相同。
+
+##### 2.1.2.5 链接到页面new_entry
+
+接下来，需要在显示特定主题的页面中添加到页面new_entry的链接。
+
+我们将这个链接放在条目列表前面，因为在这种页面中，执行的最常见的操作是添加新条目。
+
+修改learning_logs\templates\learning_logs\topic.html如下：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    <p>Topic: {{ topic }}</p>
+
+    <p>Entries:</p>
+    <p>
+        <a href="{% url 'learning_logs:new_entry' topic.id %}">Add new entry</a>
+    </p>
+
+    <ul>
+    {% for entry in entries %}
+        <li>
+            <p>{{ entry.date_added|date:'M d, Y H:i' }}</p>
+            <p>{{ entry.text|linebreaks }}</p>
+        </li>
+    {% empty %}
+        <li>There are no entries for this topic yet.</li>
+    {% endfor %}
+    </ul>
+
+{% endblock content %}
+```
+
+现在用户可添加新主题，还可在每个主题中添加任意数量的条目。
+
+### 2.1.3 编辑条目
+
+下面创建让用户账户能够编辑既有条目的页面。
+
+##### 2.1.3.1 URL模式edit_entry
+
+该页面的URL传递要编辑的条目的ID，所以对learning_logs/urls.py进行修改如下：
+```Python
+urlpatterns = [
+    # -------- snip -------- #
+
+    # page for editing an entry
+    path('edit_entry/<int:entry_id>/', views.edit_entry, name='edit_entry')
+]
+```
+
+在URL（如 http://127.0.0.1:8000/edit_entry/1/ )中传递的ID存储在形参entry_id中。
+
+这个URL模式将与其匹配的请求发送给视图函数edit_entry()。
+
+##### 2.1.3.2 视图函数edit_entry()
+
+页面edit_entry收到GET请求时，edit_entry()将返回一个表单，让用户能够对条目进行编辑；收到POST请求（条目文本经过修订）时，则将修改后的文本保存到数据库。
+
+为实现如下功能，在learning_logs/views.py中定义函数edit_entry()如下：
+```Python
+from .models import Entry
+
+def edit_entry(request, entry_id):
+    '''edit an existing entry'''
+    entry = Entry.objects.get(id=entry_id)
+    topic = entry.topic
+
+    if request.method != 'POST':
+        # Initial request; pre-fill form with the current entry.
+        form = EntryForm(instance=entry)
+    else:
+        # POST data submitted; process data.
+        form = EntryForm(instance=entry, data=request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('learning_logs:topic', topic_id=topic.id)
+
+    context = {'entry': entry, 'topic': topic, 'form': form}
+    return render(request, 'learning_logs/edit_entry.html', context)
+```
+
+首先导入模型Entry。
+
+entry获取用户要修改的条目对象以及与其相关联的主题。
+
+在请求方法为GET时将执行的if代码块中，使用实参instance=entry创建一个EntryForm实例。这个实参让Django创建一个表单，并使用既有条目对象中的信息填充它。用户将看到既有的数据，并且能够编辑。
+
+处理POST请求时，传递实参instance=entry和data=request.POST，让Django根据既有条目对象创建一个表单实例，并根据request.POST中的相关数据对其进行修改。然后，检查表单是否有效。如果有效，就调用save()且不指定任何实参，因为条目已关联到特定的主题。然后，重定向到显示条目所属主题的页面，用户将在其中看到其编辑的条目的新版本。
+
+如果要显示表单让用户编辑条目或者用户提交的表单无效，就创建上下文字典并使用模板edit_entry.html渲染页面。
+
+##### 2.1.3.3 创建模板edit_entry
+
+在learning_logs\templates\learning_logs创建edit_entry.html文件并在其中创建edit_entry模板。
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    <p><a href="{% url 'learning_logs:topic' topic.id %}">{{ topic }}</a></p>
+
+    <p>Edit entry:</p>
+
+    <form action="{% url 'learning_logs:edit_entry' entry.id %}" method='post'>
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button name="submit">Save changes</button>
+    </form>
+
+{% endblock content %}
+```
+
+实参action将表单发送给函数edit_entry()处理。在标签```{% url %}```中，将条目ID作为一个实参，让视图函数edit_entry()能够修改正确的条目对象。
+
+将提交按钮的标签设置成Save changes，旨在提醒用户：单击该按钮将保存所做的编辑，而不是创建一个新条目。
+
+##### 2.1.3.4 链接到页面edit_entry
+
+在显示特定主题的页面中给每个条目添加到页面edit_entry的链接。
+
+为此，修改learning_logs\templates\learning_logs\topic.html如下：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    <p>Topic: {{ topic }}</p>
+
+    <p>Entries:</p>
+    <p>
+        <a href="{% url 'learning_logs:new_entry' topic.id %}">Add new entry</a>
+    </p>
+
+    <ul>
+    {% for entry in entries %}
+        <li>
+            <p>{{ entry.date_added|date:'M d, Y H:i' }}</p>
+            <p>{{ entry.text|linebreaks }}</p>
+            <p>
+                <a href="{% url 'learning_logs:edit_entry' entry.id %}">Edit entry</a>
+            </p>
+        </li>
+    {% empty %}
+        <li>There are no entries for this topic yet.</li>
+    {% endfor %}
+    </ul>
+
+{% endblock content %}
+```
+
+将编辑链接放在了每个条目的日期和文本后面。在循环中，使用模板标签```{% url %}```根据URL模式edit_entry和当前条目的ID属性(entry.id)来确定URL。链接文本为Edit entry，它出现在页面中每个条目的后面。
+
+至此，“学习笔记”已具备了需要的大部分功能。用户可添加主题和条目，还可根据需要查看任何条目。

@@ -1078,3 +1078,268 @@ entry获取用户要修改的条目对象以及与其相关联的主题。
 将编辑链接放在了每个条目的日期和文本后面。在循环中，使用模板标签```{% url %}```根据URL模式edit_entry和当前条目的ID属性(entry.id)来确定URL。链接文本为Edit entry，它出现在页面中每个条目的后面。
 
 至此，“学习笔记”已具备了需要的大部分功能。用户可添加主题和条目，还可根据需要查看任何条目。
+
+## 2.2 创建用户账户
+
+建立用户注册和身份验证系统，让用户能够注册账户，进而登录和注销。
+
+为此，新建一个应用程序，其中包含与处理用户账户相关的所有功能。这个应用程序将尽可能使用Django自带的用户身份验证系统来完成工作。
+
+还将对模型Topic稍做修改，让每个主题都归属于特定用户。
+
+### 2.2.1 应用程序users
+
+命令行中使用startapp命令创建名为users的应用程序：
+```shell
+python manage.py startapp users
+```
+
+接着需要在learning_log/settings.py中，将这个新的应用程序添加到INSTALLED_APPS中，使得Django将应用程序users包含到项目中：
+```Python
+INSTALLED_APPS = [
+    # my applications
+    'learning_logs',
+    'users',
+
+    # default django applications
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+]
+```
+
+接下来，修改learning_log/urls.py，使其包含将为应用程序定义的URL，即与任何users打头的URL都匹配：
+```Python
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('users/', include('users.urls')),
+    path('', include('learning_logs.urls')),
+]
+```
+
+### 2.2.2 实现登录页面
+
+使用Django提供的默认视图login ，因此这个应用程序的URL模式稍有不同。
+
+在learning_log/users文件夹下，新建urls.py：
+```Python
+'''define URL patterns for users'''
+
+from django.urls import path, include
+
+
+app_name = 'users'
+urlpatterns = [
+    # include default auth urls
+    path('', include('django.contrib.auth.urls')),
+]
+```
+
+导入函数path和include，以便包含Django定义的一些默认的身份验证URL。这些默认的URL包含具名的URL模式，'login' 和'logout'。
+
+我们将变量app_name设置成'users'，让Django能够将这些URL与其他应用程序的URL区分开来。即便是Django提供的默认URL，将其包含在应用程序users的文件中后，也可通过命名空间users进行访问。
+
+登录页面的URL模式与URL http://127.0.0.1:8000/users/login/匹配 。这个URL中的单词users让Django在users/urls.py中查找，而单词login让它将请求发送给Django的默认视图login。
+
+##### 2.2.2.1 模板login.html
+
+用户请求登录页面时，Django将使用一个默认的视图函数，但我们依然需要为这个页面提供模板。默认的身份验证视图在文件夹registration中查找模板，因此我们需要创建这个文件夹。为此，在目录users中新建一个名templates的目录，再在这个目录中新建一个名为registration的目录。下面是模板login.html，应将其存储到目录users\templates\registration中：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    {% if form.errors %}
+        <p>Your username and password didn't match. Please try again.</p>
+    {% endif %}
+    
+    <form method="post" action="{% url 'users:login' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+    
+        <button name="submit">Log in</button>
+        <input type="hidden" name="next" value="{% url 'learning_logs:index' %}" />
+    </form>
+    
+{% endblock content %}
+```
+
+这个模板继承了base.html，旨在确保登录页面的外观与网站的其他页面相同。
+
+*注意：一个应用程序中的模板可继承另一个应用程序中的模板。*
+
+如果设置表单的errors属性，就显示一条错误消息，指出输入的用户名密码对与数据库中存储的任何用户名密码对都不匹配。
+
+我们要让登录视图对表单进行处理，因此将实参action设置为登录页面的URL。登录视图将一个表单发送给模板。在模板中，我们显示这个表单并添加一个提交按钮。
+
+包含了一个隐藏的表单元素'next'，其中的实参value告诉Django在用户成功登录后将其重定向到什么地方。在本项目中，用户将返回主页。
+
+##### 2.2.2.2 链接到登录界面
+
+下面在learning_logs\templates\learning_logs\base.html中添加到登录页面的链接，让所有页面都包含它。
+
+用户已登录时，我们不想显示这个链接，因此将它嵌套在一个```{% if %}```标签中：
+```html
+<p>
+    <a href="{% url 'learning_logs:index' %}">Learning Log</a> - 
+    <a href="{% url 'learning_logs:topics' %}">Topics</a> - 
+    {% if user.is_authenticated %}
+        Hello, {{ user.username }}.
+    {% else %}
+        <a href="{% url 'users:login' %}">Log in</a>
+    {% end if %}
+</p>
+
+{% block content %}{% endblock content %}
+```
+
+在Django身份验证系统中，每个模板都可使用变量user。这个变量有一个is_authenticated属性：如果用户已登录，该属性将为True，否则为False。这让你能够向已通过身份验证的用户显示一条消息，而向未通过身份验证的用户显示另一条消息。
+
+这里向已登录的用户显示问候语。对于已通过身份验证的用户，还设置了属性username。这里使用该属性来个性化问候语，让用户知道自己已登录。
+
+对于尚未通过身份验证的用户，显示到登录页面的链接。
+
+##### 2.2.2.3 使用登录页面
+
+前面建立了一个用户账户，下面来登录一下，看看登录页面是否管用。
+
+访问 http://127.0.0.1:8000/admin ，登出管理员超级账户
+
+登出后，访问 http://127.0.0.1:8000/users/login ，即可看到登录页面
+
+### 2.2.3 登出
+
+现在需要提供一个让用户登出的途径。为此，我们将在learning_logs\templates\learning_logs\base.html中添加一个登出链接。用户单击这个链接时，将进入一个确认其已登出的页面。
+
+##### 2.2.3.1 在base.html中添加登出链接
+
+下面在learning_logs\templates\learning_logs\base.html中添加注销链接，让每个页面都包含它。将注销链接放在```{% if user.is_authenticated %}```部分中，这样只有已登录的用户才能看到它，默认的具名登出URL模式为'logout'：
+```html
+    {% if user.is_authenticated %}
+        Hello, {{ user.username }}.
+        <a href="{% url 'users:logout' %}">Log out</a>
+    {% else %}
+```
+
+##### 2.2.3.2 登出确认页面
+
+成功登出后，用户希望获悉这一点。因此默认的注销视图使用模板logged_out.html渲染注销确认页面。
+
+在users\templates\registration目录中创建logged_out.html：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+    <p>You have been logged out. Thank you for visiting!</p>
+{% endblock content %}
+```
+
+### 2.2.4 注册页面
+
+下面创建一个页面供新用户注册。我们将使用Django提供的表单UserCreationForm，但编写自己的视图函数和模板。
+
+##### 2.2.4.1 注册页面的URL模式
+
+在users\urls.py中添加注册页面的URL模式：
+```Python
+from . import views
+
+app_name = 'users'
+urlpatterns = [
+    # include default auth urls
+    path('', include('django.contrib.auth.urls')),
+    # registration page
+    path('register/', views.register, name='register'),
+]
+```
+
+注册页面的URL模式与URL http://127.0.0.1:8000/users/register/ 匹配，并将请求发送给视图函数register() 。
+
+##### 2.2.4.2 视图函数register()
+
+在注册页面首次被请求时，视图函数register()需要显示一个空的注册表单，并在用户提交填写好的注册表单时对其进行处理。如果注册成功，这个函数还需让用户自动登录。
+
+在users/views.py中输入代码如下：
+```Python
+from django.shortcuts import render, redirect
+from django.contrib.auth import login
+from django.contrib.auth.forms import UserCreationForm
+
+
+def register(request):
+    """register a new user"""
+    if request.method != 'POST':
+        # display blank registration form
+        form = UserCreationForm()
+    else:
+        # process completed form
+        form = UserCreationForm(data=request.POST)
+        
+        if form.is_valid():
+            new_user = form.save()
+            # log the user in and then redirect to home page
+            login(request, new_user)
+            return redirect('learning_logs:index')
+
+    # display a blank or invalid form
+    context = {'form': form}
+    return render(request, 'registration/register.html', context)
+```
+
+首先导入函数render()和redirect()，然后导入函数login()，以便在用户正确填写了注册信息时让其自动登录。
+
+还导入默认表单UserCreationForm。在函数register()中，检查要响应的是否是POST请求。如果不是，就创建一个UserCreationForm 实例，且不给它提供任何初始数据。
+
+如果响应的是POST请求，就根据提交的数据创建一个UserCreationForm实例，并检查这些数据是否有效。就本例而言，有效是指用户名未包含非法字符，输入的两个密码相同，以及用户没有试图做恶意的事情。
+
+如果提交的数据有效，就调用表单的方法save()，将用户名和密码的散列值保存到数据库中。方法save()返回新创建的用户对象，我们将它赋给了new_user。保存用户的信息后，调用函数login()并传入对象request和new_user，为用户创建有效的会话，从而让其自动登录。最后，将用户重定向到主页，而主页的页眉中显示了一条个性化的问候语，让用户知道注册成
+功了。
+
+在这个函数的末尾，我们渲染了注册页面：它要么显示一个空表单，要么显示提交的无效表单。
+
+##### 2.2.4.3 注册模板
+
+下面创建注册页面的模板users\templates\registration\register.html：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block content %}
+
+    <form method="post" action="{% url 'users:register' %}">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <button name="submit">Register</button>
+        <input type="hidden" name="next" value="{% url 'learning_logs:index' %}" />
+    </form>
+
+{% endblock content %}
+```
+
+方法as_p让Django在表单中正确地显示所有的字段，包括错误消息——如果用户没有正确地填写表单。
+
+##### 2.2.4.4 链接到注册页面
+
+在用户没有登录时，需要显示到注册页面的链接。
+
+在learning_logs\templates\learning_logs\base.html中修改代码如下：
+```html
+<p>
+    <a href="{% url 'learning_logs:index' %}">Learning Log</a> -
+    <a href="{% url 'learning_logs:topics' %}">Topics</a> - 
+    {% if user.is_authenticated %}
+        Hello, {{ user.username }}.
+        <a href="{% url 'users:logout' %}">Log out</a>
+    {% else %}
+        <a href="{% url 'users:register' %}">Register</a> -
+        <a href="{% url 'users:login' %}">Log in</a>
+    {% endif %}
+</p>
+  
+{% block content %}{% endblock content %}
+```
+
+现在，已登录的用户看到的是个性化的问候语和注销链接，而未登录的用户看到的是注册链接和登录链接。

@@ -1343,3 +1343,265 @@ def register(request):
 ```
 
 现在，已登录的用户看到的是个性化的问候语和注销链接，而未登录的用户看到的是注册链接和登录链接。
+
+## 2.3 让用户拥有自己的数据
+
+用户应该能够输入其专有的数据，因此我们将创建一个系统，确定各项数据所属的用户，再限制对页面的访问，让用户只能使用自己的数据。
+
+将修改模型Topic，让每个主题都归属于特定用户。这也将影响条目，因为每个条目都属于特定的主题。我们先来限制对一些页面的访问。
+
+### 2.3.1 使用login_required限制访问
+
+Django提供了装饰器@login_required，让你能够轻松地只允许已登录用户访问某些页面。装饰器decorator是放在函数定义前面的指令，Python在函数运行前根据它来修改函数代码的行为。
+
+##### 2.3.1.1 限制访问显示所有主题的页面
+
+每个主题都归特定用户所有，因此应只允许已登录的用户请求显示所有主题的页面。
+
+在learning_logs/views.py中添加如下代码：
+```Python
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+
+# -------- snip -------- #
+
+@login_required
+def topics(request):
+# -------- snip -------- #
+```
+
+首先导入函数login_required()。将login_required()作为装饰器应用于视图函数topics()——在它前面加上符号@和login_required，让Python在运行topics()的代码之前运行login_required()的代码。
+
+login_required()的代码检查用户是否已登录，仅当用户已登录时，Django才运行topics()的代码。如果用户未登录，就重定向到登录页面。
+
+为实现这种重定向，需要修改settings.py，让Django知道到哪里去查找登录页面。为此在learning_log/settings.py最末尾添加如下代码：
+```Python
+# my settings
+LOGIN_URL = 'users:login'
+```
+
+现在，如果未登录的用户请求装饰器@login_required保护的页面，Django将重定向到settings.py中的LOGIN_URL指定的URL。
+
+要测试这个设置，可注销并进入主页，再单击链接Topics，这将重定向到登录页面。然后，使用你的账户登录，并再次单击主页中的Topics链接，你将看到显示所有主题的页面。
+
+##### 2.3.1.2 全面限制对“学习笔记”项目的访问
+
+在项目“学习笔记”中，将不限制对主页和注册页面的访问，并限制对其他所有页面的访问。
+
+在learning_logs/views.py中，对除index()外的每个视图都应用装饰器@login_required（即在每个定义函数前都加上：
+```Python
+@login_required
+```
+
+此时，如果在未登录的情况下尝试访问这些页面，将被重定向到登录页面。
+
+另外，也不能单击到new_topic等页面的链接。如果你输入URL http://127.0.0.1:8000/new_topic/ ，将被重定向到登录页面。
+
+### 2.3.2 将数据关联到用户
+
+现在，需要将数据关联到提交它们的用户。只需将最高层的数据关联到用户，更低层的数据就会自动关联到用户。
+
+下面修改模型Topic，在其中添加一个关联到用户的外键。这样做之后，必须对数据库进行迁移。最后，必须修改某些视图，使其只显示与当前登录的用户相关联的数据。
+
+##### 2.3.2.1 修改模型Topic
+
+对于learning_logs/models.py中的Topic模型进行修改。
+
+首先导入django.contrib.auth中的模型User，然后在Topic中添加字段owner，它建立到模型User的外键关系。用户被删除时，所有与之相关联的主题也会被删除。
+
+其代码修改如下：
+```Python
+from django.contrib.auth.models import User
+
+
+class Topic(models.Model):
+    '''a topic the user is learning about'''
+    text = models.CharField(max_length=200)
+    date_added = models.DateTimeField(auto_now_add=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE)
+
+    def __str__(self):
+        '''return a string representation of the model'''
+        return self.text
+```
+
+##### 2.3.2.2 确定当前有多少用户
+
+迁移数据库时，Django将对数据库进行修改，使其能够存储主题和用户之间的关联。为执行迁移，Django需要知道该将各个既有主题关联到哪个用户。最简单的办法是，将既有主题都关联到同一个用户，如超级用户。为此，需要知道该用户的ID。
+
+下面来查看已创建的所有用户的ID。
+
+启动一个Django shell会话:
+```shell
+python manage.py shell
+```
+
+在命令行中输入：
+```shell
+>>> from django.contrib.auth.models import User
+>>> User.objects.all()
+<QuerySet [<User: django_admin>, ...(other not-superaccount users) ]>
+>>> for user in User.objects.all():
+...     print(user.username, user.id)
+... 
+django_admin 1
+(other not-superaccount user) 2
+>>>
+```
+
+通过遍历列表并打印每位用户的用户名和ID。Django询问要将既有主题关联到哪个用户时，我们将指定其中一个ID值。
+
+##### 2.3.2.3 迁移数据库
+
+知道用户ID后，就可迁移数据库了。本项目中我们暂时将模型Topic关联到特定账户，而非在文件learning_logs/models.py中指定默认账户。
+
+首先在命令行中输入：
+```shell
+python manage.py makemigrations learning_logs
+```
+
+当python询问如何迁移数据库时，选择第一个选项。
+```shell
+You are trying to add a non-nullable field 'owner' to topic without a default; we can't do that (the database needs something to populate existing rows).
+Please select a fix:
+ 1) Provide a one-off default now (will be set on all existing rows with a null value for this column)
+ 2) Quit, and let me add a default in models.py
+Select an option: 1
+Please enter the default value now, as valid Python
+The datetime and django.utils.timezone modules are available, so you can do e.g. timezone.now
+Type 'exit' to exit this prompt
+>>> 1
+Migrations for 'learning_logs':
+  learning_logs\migrations\0003_topic_owner.py
+    - Add field owner to topic
+```
+
+在输出中，Django指出你试图给既有模型Topic添加一个不可为空的字段，而该字段没有默认值。Django提供了两种选择：要么现在提供默认值，要么退出并在models.py中添加默认值。我们选择了第一个选项，因此Django让我们输入默认值。
+
+为将所有既有主题都关联到管理用户django_admin，我们输入用户ID值1。可以使用已创建的任何用户的ID，而非必须是超级用户。
+
+接下来，Django使用这个值来迁移数据库，并生成了迁移文件0003_topic_owner.py，它在模型Topic中添加字段owner。
+
+接下来执行迁移。在命令行中输入：
+```shell
+python manage.py migrate
+```
+
+为验证迁移符合预期，可开启django shell会话，并输入：
+```shell
+>>> from learning_logs.models import Topic
+>>> for topic in Topic.objects.all():
+...    print(topic, topic.owner)
+... 
+Chess django_admin
+Rock Climbing django_admin
+>>>
+```
+
+遍历所有的既有主题，并打印每个主题及其所属的用户。如你所见，现在每个主题都属于超级管理员用户django_admin。
+
+*注意：你可以重置数据库而不是迁移它，但如果这样做，既有的数据都将丢失。一种不错的做法是，学习如何在迁移数据库的同时确保用户数据的完整性。如果你确实想要一个全新的数据库，可执行命令*```python manage.py flush```*，这将重建数据库的结构。如果这样做，就必须重新创建超级用户，且原来的所有数据都将丢失。*
+
+### 2.3.3 只允许用户访问自己的主题
+
+当前，不管以哪个用户的身份登录，都能够看到所有的主题。下面改变这一点，只向用户显示属于其自己的主题。
+
+在learning_logs/views.py中，修改函数topics()如下：
+```Python
+@login_required
+def topics(request):
+    '''show all topics'''
+    topics = Topic.objects.filter(owner=request.user).order_by('date_added')
+    context = {'topics': topics}
+    return render(request, 'learning_logs/topics.html', context)
+```
+
+用户登录后，request对象将有一个user属性，其中存储了有关该用户的信息。查询Topic.objects.filter(owner=request.user)让Django只从数据库中获取owner属性为当前用户的Topic对象。由于没有修改主题的显示方式，无须对显示所有主题的页面的模板做任何修改。
+
+要查看结果，以所有既有主题关联到的用户的身份登录，并访问显示所有主题的页面，你将看到所有的主题。然后，登出并以另一个用户的身份登录，该页面将不列出任何主题。
+
+### 2.3.4 保护用户的主题
+
+我们还没有限制对显示单个主题的页面的访问，因此任何已登录的用户都可输入类似于 http://localhost:8000/topics/1/ 的URL，来访问显示相应主题的页面。
+
+为修复这种问题，我们在learning_logs/views.py中的视图函数topic()获取请求的条目前执行检查。
+```Python
+from django.http import Http404
+
+
+def topic(request, topic_id):
+    '''show a single topic and all its entries'''
+    topic = Topic.objects.get(id=topic_id)
+    # make sure the topic belongs to the current user
+    if topic.owner != request.user:
+        raise Http404
+
+    entries = topic.entry_set.order_by('-date_added')
+    context = {'topic': topic, 'entries': entries}
+    return render(request, 'learning_logs/topic.html', context)
+```
+
+服务器上没有请求的资源时，标准的做法是返回404响应。这里导入了异常Http404，并在用户请求其不应查看的主题时引发这个异常。收到主题请求后，在渲染页面前检查该主题是否属于当前登录的用户。如果请求的主题不归当前用户所有，就引发Http404异常，让Django返回一个404错误页面。
+
+现在，如果你试图查看其他用户的主题条目，将看到Django发送的消息Page Not Found。
+
+### 2.3.5 保护页面edit_entry
+
+页面edit_entry的URL形式为 http://127.0.0.1:8000/edit_entry/entry_id/ ，其中entry_id 是一个数。下面来保护这种页面，禁止用户通过输入类似于前面的URL来访问其他用户的条目。
+
+修改learning_logs/views.py中的函数edit_entry()如下：
+```Python
+def edit_entry(request, entry_id):
+    '''edit an existing entry'''
+    entry = Entry.objects.get(id=entry_id)
+    topic = entry.topic
+
+    if topic.owner != request.user:
+        raise Http404
+
+    if request.method != 'POST':
+        # Initial request; pre-fill form with the current entry.
+        form = EntryForm(instance=entry)
+    else:
+        # POST data submitted; process data.
+        form = EntryForm(instance=entry, data=request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('learning_logs:topic', topic_id=topic.id)
+
+    context = {'entry': entry, 'topic': topic, 'form': form}
+    return render(request, 'learning_logs/edit_entry.html', context)
+```
+
+首先获取指定的条目以及与之相关联的主题，再检查主题的所有者是否是当前登录的用户。如果不是，就引发Http404异常。
+
+### 2.3.6 将新主题关联到当前账户
+
+当前，用于添加新主题的页面存在问题——没有将新主题关联到特定用户。如果你尝试添加新主题，将看到错误消息IntegrityError，指出learning_logs_topic.user_id不能为NULL（NOT NULL constraint failed: learning_logs_topic.owner_id）。
+
+Django的意思是说，创建新主题时，必须给owner字段指定值。我们可通过request对象获悉当前用户，因此有一个修复该问题的简单方案。
+
+通过修改learning_logs/views.py中的函数new_topic()来将新主题关联到当前账户：
+```Python
+def new_topic(request):
+    '''add a new topic'''
+    if request.method != 'POST':
+        # No data submitted; create a blank form.
+        form = TopicForm()
+    else:
+        # POST data submitted; process data.
+        form = TopicForm(data=request.POST)
+        if form.is_valid():
+            new_topic = form.save(commit=False)
+            new_topic.owner = request.user
+            new_topic.save()
+            return redirect('learning_logs:topics')
+
+    # display a blank or invalid form
+    context = {'form': form}
+    return render(request, 'learning_logs/new_topic.html', context)
+```
+
+首先调用form.save()并传递实参commit=False，因为要先修改新主题，再将其保存到数据库。接下来，将新主题的owner属性设置为当前用户。最后，对刚定义的主题实例调用save()。现在，主题包含所有必不可少的数据，将被成功保存。
+
+这个项目现在允许任何用户注册，而每个用户想添加多少新主题都可以。每个用户都只能访问自己的数据，无论是查看数据、输入新数据还是修改旧数据时都如此。

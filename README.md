@@ -94,6 +94,14 @@ web: guincore learning_log.wsgi --log-file -
 
 首先将文件git commit到本地分支heroku-deploy完毕，并推送到GitHub仓库的同名分支中。
 
+*注意：这里通过git上传时，.gitignore文件需加上*"\*.sqlite3"*来忽略跟踪对本地数据库的修改，因为如果在服务器上使用的是SQLite，将项目推送到服务器时，可能会不小心用本地测试数据库覆盖在线数据库。*
+
 在heroku中关联上GitHub账户，连接上本项目，选择heroku-deploy分支，进行构建，直至构建完成。
 
 *注意：第一次启动程序时可能出现无论是登录还是注册网页出错的页面，这是没有迁移数据库导致的。在settings中选择run console，在控制台中输入*```python manage.py migrate```*进行数据库迁移，然后重新构建即可。*
+
+至此完成了简易的服务器部署。
+
+也可以用heroku CLI进行部署和推送，具体可以查看[Python Crash Course, 2nd Edition by Eric Matthes](https://github.com/ehmatthes/pcc_2e)，这里也附上有关这一节的书：
+- [Python Crash Course, 2nd Edition by Eric Matthes p448-461, EN]()
+- [Python Crash Course, 2nd Edition by Eric Matthes p514-529, CH]()

@@ -103,5 +103,5 @@ web: guincore learning_log.wsgi --log-file -
 至此完成了简易的服务器部署。
 
 也可以用heroku CLI进行部署和推送，具体可以查看[Python Crash Course, 2nd Edition by Eric Matthes](https://github.com/ehmatthes/pcc_2e)，这里也附上有关这一节的书：
-- [Python Crash Course, 2nd Edition by Eric Matthes p448-461, EN]()
-- [Python Crash Course, 2nd Edition by Eric Matthes p514-529, CH]()
+- [Python Crash Course, 2nd Edition by Eric Matthes p448-461, EN](https://github.com/cy-Yin/UseDjango-to-create-WebApplication/blob/heroku-deploy/books/Python%20Crash%20Course%2C%202nd%20Edition%20by%20Eric%20Matthes%20p514-529%2C%20EN.pdf)
+- [Python Crash Course, 2nd Edition by Eric Matthes p514-529, CH](https://github.com/cy-Yin/UseDjango-to-create-WebApplication/blob/heroku-deploy/books/Python%20Crash%20Course%2C%202nd%20Edition%20by%20Eric%20Matthes%20p514-529%2C%20CH.pdf)

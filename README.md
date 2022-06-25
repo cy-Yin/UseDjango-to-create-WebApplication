@@ -1605,3 +1605,336 @@ def new_topic(request):
 首先调用form.save()并传递实参commit=False，因为要先修改新主题，再将其保存到数据库。接下来，将新主题的owner属性设置为当前用户。最后，对刚定义的主题实例调用save()。现在，主题包含所有必不可少的数据，将被成功保存。
 
 这个项目现在允许任何用户注册，而每个用户想添加多少新主题都可以。每个用户都只能访问自己的数据，无论是查看数据、输入新数据还是修改旧数据时都如此。
+
+# 3. 设置应用程序的样式并部署
+
+当前的“学习笔记”并未设置样式，故只能在本地运行。
+
+所以当前需要用Bootstrap库来设置样式，并且将“学习笔记”项目部署到Heroku，将其推送到服务器，使其可以联网使用。
+
+## 3.1 设置项目样式
+
+在应用程序能够正确运行的基础上，下面来设置外观。
+
+### 3.1.1 应用程序django-bootstrap4
+
+将使用django-bootstrap4将Bootstrap集成到项目中。这个应用程序下载必要的Bootstrap文件，将其放到项目的合适位置，让你能够在项目的模板中使用样式设置指令。
+
+首先在虚拟环境中安装django-bootstrap4，这里我们安装0.0.7版本：
+```shell
+pip install django-bootstrap4==0.0.7
+```
+
+然后，为在项目中包含应用程序django-bootstrap4，在learning_log/settings.py中的INSTALL_APPS中新建一个名为“第三方应用程序”的片段，用于指定其他开发人员开发的应用程序，并添加'bootstrap4'。务必将这个片段放在“我的应用程序”和“Django默认添加的应用程序”之间。代码如下：
+```Python
+INSTALLED_APPS = [
+    # my applications
+    'learning_logs',
+    'users',
+
+    # third party apps
+    'bootstrap4',
+
+    # default django applications
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+]
+```
+
+### 3.1.2 使用Bootstrap设置“学习笔记”的样式
+
+Bootstrap是一个大型样式设置工具集，还提供了大量模板，可应用于项目以创建独特的总体风格。对Bootstrap初学者来说，这些模板比样式设置工具用起来容易得多。要查看Bootstrap提供的模板，可访问其官方网站，单击Examples并找到Navbars。我们将使用模板Navbars static，它提供了简单的顶部导航栏以及用于放置页面内容的容器。
+
+### 3.1.3 修改base.html
+
+需要修改learning_logs\templates\learning_logs\base.html，来使用Bootstrap的模板。
+
+##### 3.1.3.1 定义HTML头部
+
+通过定义HTML头部，使得显示“学习笔记”的每个页面时，浏览器标题栏都显示该网站名。
+
+此外，还要添加一些在模板中使用Bootstrap所需的信息。
+
+将learning_logs\templates\learning_logs\base.html重写如下：
+```html
+{% load bootstrap4 %}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1,
+        shrink-to-fit=no">
+    <title>Learning Log</title>
+
+    {% bootstrap_css %}
+    {% bootstrap_javascript jquery='full' %}
+
+</head>
+```
+
+首先加载django-bootstrap4中的模板标签集。
+
+接下来，将这个文件声明为使用英语编写的HTML文档。
+
+HTML文件分为两个主要部分：头部(head)和主体(body)。HTML文件的头部不包含任何内容，只是向浏览器提供正确显示页面所需的信息。
+
+title元素使得在浏览器中打开网站“学习笔记”的页面时，浏览器的标题栏将显示该元素的内容。
+
+使用django-bootstrap4的一个自定义模板标签，让Django包含所有的Bootstrap样式文件。接下来的标签启用你可能在页面中使用的所有交互式行为，如可折叠的导航栏。最后为结束标签```</head>```。
+
+##### 3.1.3.2 定义导航栏
+
+需要同时支持较窄的手机屏幕和较宽的台式计算机显示器。
+
+将分为三个部分定义导航栏。
+
+第一部分：
+```html
+<body>
+
+    <nav class="navbar navbar-expand-md navbar-light bg-light mb-4 border">
+  
+        <a class="navbar-brand" href="{% url 'learning_logs:index'%}">
+                Learning Log</a>
+  
+        <button class="navbar-toggler" type="button" data-toggle="collapse"
+                data-target="#navbarCollapse" aria-controls="navbarCollapse"
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span></button>
+```
+
+第一个元素为起始标签```<body>```。HTML文件的主体包含用户将在页面上看到的内容。
+
+```<nav>```元素，表示页面的导航链接部分。对于这个元素内的所有内容，都将根据此处的navbar和navbar-expand-md等选择器定义的Bootstrap样式规则来设置样式。选择器(selector)决定了样式规则将应用于页面上的哪些元素。选择navbar-light和bg-light使用一种浅色主题来设置导航栏的颜色。mb-4中的mb表示下边距(margin-bottom)，这个选择器确保导航栏和页面其他部分之间有一些空白区域。选择器border在浅色背景周围添加很细的边框，将导航栏与页面其他部分分开。
+
+指定在导航栏最左端显示项目名，并将其设置为到主页的链接，因为它将出现在这个项目的每个页面中。选择器navbar-brand设置这个链接的样式，使其比其他链接更显眼，这是一种网站推广方式。
+
+定义一个按钮，它将在浏览器窗口太窄、无法水平显示整个导航栏时显示出来。如果用户单击这个按钮，将出现一个下拉列表，其中包含所有的导航元素。在用户缩小浏览器窗口或在屏幕较小的移动设备上显示网站时，collapse会导致导航栏折叠起来。
+
+第二部分：
+```html
+        <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'learning_logs:topics'%}">
+                        Topics</a></li>
+            </ul>
+```
+
+首先开启了导航栏的一个新区域。div是division的缩写。我们创建页面时，将其分隔成多个区域，并指定要应用于各个区域的样式和行为规则。在```<div>```起始标签中定义的样式和行为规则将影响下一个结束标签`</div>`之前的所有元素。这里指定了屏幕或窗口太窄时将折叠起来的导航栏部分的起始位置。
+
+定义了一组链接。Bootstrap通过```<ul><li></li></ul>```将导航元素定义为无序列表项，但使用的样式规则让它们一点也不像列表。导航栏中的每个链接或元素都能以列表项的方式定义。这里只有一个列表项——到显示所有主题的页面的链接。
+
+第三部分：
+```html
+            <ul class="navbar-nav ml-auto">
+                {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <span class="navbar-text">Hello, {{ user.username }}.</span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'users:logout' %}">Log out</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'users:register' %}">Register</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'users:login' %}">Log in</a></li>
+                {% endif %}
+            </ul>
+        </div>
+        
+    </nav>
+```
+
+使用起始标签```<ul>```定义了另一组链接（你可根据需要在页面中包含任意数量的链接编组），这组链接与登录和注册相关，出现在导航栏最右端。选择器ml-auto表示自动左边距(margin-leftautomatic)，它根据导航栏包含的其他元素设置左边距，确保这组链接位于屏幕右边。
+
+if代码块与以前使用的条件代码块相同，它根据用户是否已登录显示相应的消息。这个代码块比以前长一些，因为它现在包含一些样式规则。
+
+```<span>```元素，用于设置区域内一系列文本或元素的样式。因为```<div>```元素创建区域，而```<span>```元素不会。这里只是要设置导航栏中信息性文本（如已登录用户的名称）的样式，旨在让其外观与链接不同，以免用户忍不住去单击，因此使用了```<span>```。
+
+要在导航栏中添加其他链接，可在既有的```<ul>```元素中添加```<li>```元素，并使用这里演示的样式设置指令。
+
+##### 3.1.3.3 定义页面的主要部分
+
+在base.html中，还需添加一些代码：定义两个块，供各个页面放置其特有的内容。
+
+添加如下部分：
+```html
+    <main role="main" class="container">
+        <div class="pb-2 mb-2 border-bottom">
+            {% block page_header %}{% endblock page_header %}
+        </div>
+        <div>
+            {% block content %}{% endblock content %}
+        </div>
+    </main>
+        
+</body>
+        
+</html>
+```
+
+```<main>```元素用于定义页面主体的最重要部分。此处指定了Bootstrap选择器container，这是一种对页面元素进行编组的简单方式。我们将在这个容器中放置两个```<div>```元素。
+
+第一个```<div>```元素包含一个page_header块，我们会在大多数页面中使用它来指定标题。为突出标题，设置内边距。内边距(padding)指的是元素内容和边框之间的距离。选择器pb-2是一个Bootstrap指令，将元素的下内边距设置为适度的值。外边距(margin)指的是元素的边框与其他元素之间的距离。我们只想在标题下面添加边框，因此使用选择器border-bottom，它在page_header块的下面添加较细的边框。
+
+另一个```<div>```元素包含content 块。我们没有对这个块指定样式，因此在具体的页面中，可根据需要设置内容的样式。
+
+如果现在在浏览器中加载“学习笔记”的主页，你将看到一个专业级导航栏。请尝试将窗口调整得非常窄，此时导航栏将变成一个按钮。如果你单击这个按钮，将打开一个下拉列表，其中包含所有的导航链接。
+
+### 3.1.4 使用jumbotron设置主页的样式
+
+下面使用Bootstrap元素jumbotron来修改主页。jumbotron元素是一个大框，在页面中显得鹤立鸡群。它可以包含任何东西，通常用于在主页中呈现简要的项目描述和让用户行动起来的元素。
+
+修改learning_logs\templates\learning_logs\index.html如下：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block page_header %}
+    <div class="jumbotron">
+        <h1 class="display-3">Track your learning.</h1>
+
+        <p class="lead">Make your own Learning Log, and keep a list of the
+            topics you're learning about. Whenever you learn something new
+            about a topic, make an entry summarizing what you've learned.</p>
+
+        <a class="btn btn-lg btn-primary" href="{% url 'users:register' %}"
+            role="button">Register &raquo;</a>
+    </div>
+{% endblock page_header %}
+```
+
+告诉Django接下来要定义page_header块包含的内容。
+
+jumbotron就是应用了一系列样式设置指令的```<div>```元素。这里使用选择器jumbotron应用这组来自Bootstrap库的样式设置指令。
+
+这个jumbotron包含三个元素。第一个是一条简短的消息——Track your learning，让首次访问者大致知道“学习笔记”是做什么用的。h1类表示一级标题，而选择器display-3让这个标题显得更窄更高。
+
+添加一条更长的消息，让用户更详细地知道使用学习笔记可以做什么。
+
+通过创建一个按钮（而不是文本链接）邀请用户注册账户。它与导航栏中的链接Register一样链接到的注册页面，但是按钮更显眼，并且让用户知道要使用这个项目首先需要如何做。这里的选择器让这个按钮很大，召唤用户赶快行动起来。代码```&raquo;```是一个HTML实体，表示两个右尖括号```>>```。
+
+结束page_header块。我们不想在这个页面中添加其他内容，因此不需要定义content块。
+
+### 3.1.5 设置登录页面的样式
+
+下面修改users\templates\registration\login.html来改进登录表单，使得表单与页面的其他部分一致：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% load bootstrap4 %}
+
+{% block page_header %}
+    <h2>Log in to your account.</h2>
+{% endblock page_header %}
+
+{% block content %}
+
+    <form method="post" action="{% url 'users:login' %}" class="form">
+        {% csrf_token %}
+        {% bootstrap_form form %}
+        {% buttons %}
+            <button name="submit" class="btn btn-primary">Log in</button>
+        {% endbuttons %}
+    
+        <input type="hidden" name="next" 
+            value="{% url 'learning_logs:index' %}" />
+    </form>
+    
+{% endblock content %}
+```
+
+在这个模板中加载bootstrap4模板标签。
+
+定义page_header块，指出这个页面是做什么用的。注意，我们从这个模板中删除了代码块```{% if form.errors %}```，因为django-bootstrap4会自动管理表单错误。
+
+添加属性class="form"，再使用模板标签```{% bootstrap_form %}```来显示表单，它替换了标签```{{ form.as_p }}```。模板标签```{% bootstrap_form %}```将Bootstrap样式规则应用于各个表单元素。
+
+bootstrap4起始模板标签```{% buttons %}```将Bootstrap样式应用于按钮。
+
+### 3.1.6 设置显示所有主题的页面的样式
+
+下面来确保用于查看信息的页面也有合适的样式
+
+首先来设置显示所有主题的页面，修改learning_logs\templates\learning_logs\topics.html如下：
+```html
+{% extends "learning_logs/base.html" %}
+
+{% block page_header %}
+    <h1>Topics</h1>
+{% endblock page_header %}
+
+{% block content %}
+    <ul>
+        {% for topic in topics %}
+            <li><h3>
+                <a href="{% url 'learning_logs:topic' topic.id %}">{{ topic }}</a>
+            </h3></li>
+        {% empty %}
+            <li><h3>No topics have been added yet.</h3></li>
+        {% endfor %}
+    </ul>
+
+    <h3><a href="{% url 'learning_logs:new_topic' %}">Add a new topic</a></h3>
+
+{% endblock content %}
+```
+
+不需要标签```{% load bootstrap4 %}```，因为这个文件中没有使用任何bootstrap4自定义标签。我们将标题Topics移到page_header块中，并给它指定标题样式，而没有使用简单的段落标签。将每个主题都设置为```<h3>```元素，使其在页面上显得大一些。对于添加新主题的链接，也做同样的处理。
+
+### 3.1.7 设置显示单个主题的页面中的条目样式
+
+比起大部分页面，显示单个主题的页面包含更多内容，因此需要做样式设置工作要更多一些。
+
+我们将使用Bootstrap的卡片(card)组件来突出每个条目。
+
+卡片是带灵活的预定义样式的```<div>```，非常适合用于显示主题的条目。
+
+修改learning_logs\templates\learning_logs\topic.html如下：
+```html
+{% extends 'learning_logs/base.html' %}
+
+{% block page_header %}
+    <h3>{{ topic }}</h3>
+{% endblock page_header %}
+
+{% block content %}
+    <p>
+        <a href="{% url 'learning_logs:new_entry' topic.id %}">Add new entry</a>
+    </p>
+
+    <ul>
+    {% for entry in entries %}
+        <div class="card mb-3">
+            <h4 class="card-header">
+                {{ entry.date_added|date:'M d, Y H:i' }}
+                <small><a href="{% url 'learning_logs:edit_entry' entry.id %}">
+                    edit entry</a></small>
+            </h4>
+            <div class="card-body">
+                {{ entry.text|linebreaks }}
+            </div>
+        </div>
+    {% empty %}
+        <p>There are no entries for this topic yet.</p>
+    {% endfor %}
+
+{% endblock content %}
+```
+
+首先将主题放在page_header块中，并删除该模板中以前使用的无序列表结构。
+
+创建一个带选择器card的```<div>```元素（而不是将每个条目作为一个列表项），其中包含两个嵌套的元素：一个包含条目的创建日期以及用于编辑条目的链接，另一个包含条目的内容。
+
+嵌套的第一个元素是个标题。它是带选择器card-header的```<h4>```元素，包含条目的创建日期以及用于编辑条目的链接。用于编辑条目的链接放在标签```<small>```内，这让它看起来比时间戳小一些。
+
+第二个嵌套的元素是一个带选择器card-body的```<div>```元素，将条目的内容放在一个简单的框内。注意我们只修改了影响页面外观的元素，对在页面中包含信息的Django代码未做任何修改。
+
+*注意：要使用其他Bootstrap模板，可采用类似流程：将要使用的模板复制到base.html中并修改包含实际内容的元素，以使用该模板来显示项目的信息，然后使用Bootstrap的样式设置工具来设置各个页面中内容的样式。*
